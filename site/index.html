@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#102a43" />
+    <meta name="description" content="足球比赛让球与大小球独立盈亏分析看板" />
+    <title>足球战绩看板</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="hero">
+        <div class="hero-inner">
+          <div>
+            <p class="eyebrow">自动分析 · 北京时间</p>
+            <h1>足球战绩看板</h1>
+            <p class="hero-subtitle">让球与大小球分开核算、分开排名</p>
+            <p class="updated" id="updated-at">正在载入最新台账…</p>
+          </div>
+          <div class="live-pill"><span></span>自动任务已开启</div>
+        </div>
+      </header>
+
+      <div class="content">
+        <section class="kpi-grid" id="kpi-grid" aria-label="核心指标"></section>
+        <div class="combined-note" id="combined-note"></div>
+
+        <nav class="view-tabs" aria-label="看板视图">
+          <button type="button" data-tab="overview">总览</button>
+          <button type="button" data-tab="league">赛事</button>
+          <button type="button" data-tab="team">球队</button>
+          <button type="button" data-tab="matches">最新50</button>
+        </nav>
+
+        <div id="view" aria-live="polite"></div>
+      </div>
+
+      <nav class="mobile-nav" aria-label="手机底部导航">
+        <button type="button" data-tab="overview"><i></i>总览</button>
+        <button type="button" data-tab="league"><i></i>赛事</button>
+        <button type="button" data-tab="team"><i></i>球队</button>
+        <button type="button" data-tab="matches"><i></i>最新50</button>
+      </nav>
+    </main>
+
+    <noscript>请启用 JavaScript 查看交互式看板。</noscript>
+    <script src="./data.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
