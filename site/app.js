@@ -350,6 +350,23 @@
     return String(value);
   }
 
+  function workbookDecoratedValue(header, value) {
+    const text = workbookCellText(value);
+    const compact = text.replace(/\s+/g, "");
+    if (/结论$/.test(header)) {
+      if (/^(赢|胜)/.test(compact)) return '<span class="workbook-result-pill is-win">' + displayValue(text) + "</span>";
+      if (/^(输|负)/.test(compact)) return '<span class="workbook-result-pill is-loss">' + displayValue(text) + "</span>";
+      if (/^(走|退|取消)/.test(compact)) return '<span class="workbook-result-pill is-push">' + displayValue(text) + "</span>";
+    }
+    if (/盈亏/.test(header) && compact !== "") {
+      const numeric = Number(compact.replaceAll(",", "").replace(/^\+/, ""));
+      if (Number.isFinite(numeric) && numeric !== 0) {
+        return '<span class="workbook-profit ' + (numeric > 0 ? "is-gain" : "is-loss") + '">' + displayValue(text) + "</span>";
+      }
+    }
+    return displayValue(text);
+  }
+
   function workbookHeaders(sheet) {
     if (!sheet.headerRow) return sheet.columns.slice();
     const header = sheet.rows.find((row) => row.number === sheet.headerRow);
@@ -418,7 +435,7 @@
       "</tr></thead><tbody>" +
       visible.map((row) =>
         '<tr><th class="row-number">' + row.number + "</th>" +
-        headers.map((_, index) => '<td title="' + escapeHtml(workbookCellText(row.cells[index])) + '">' + displayValue(workbookCellText(row.cells[index])) + "</td>").join("") +
+        headers.map((header, index) => '<td title="' + escapeHtml(workbookCellText(row.cells[index])) + '">' + workbookDecoratedValue(header, row.cells[index]) + "</td>").join("") +
         "</tr>"
       ).join("") +
       "</tbody></table></div>";
@@ -429,7 +446,7 @@
         '<details class="workbook-row-card"' + (rowIndex === 0 ? " open" : "") + ">" +
           '<summary><span>第 ' + row.number + " 行</span><b>" + escapeHtml(primary.title) + "</b><small>" + escapeHtml(primary.subtitle) + "</small></summary>" +
           '<div class="workbook-card-grid">' + headers.map((header, index) =>
-            '<div><span>' + escapeHtml(sheet.columns[index] + " · " + header) + "</span><p>" + displayValue(workbookCellText(row.cells[index])) + "</p></div>"
+            '<div><span>' + escapeHtml(sheet.columns[index] + " · " + header) + "</span><p>" + workbookDecoratedValue(header, row.cells[index]) + "</p></div>"
           ).join("") + "</div>" +
         "</details>"
       );

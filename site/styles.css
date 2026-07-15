@@ -264,6 +264,13 @@ h2 { margin: 0; color: var(--navy); font-size: 20px; letter-spacing: -.02em; }
 .workbook-table tbody tr:hover td { background: #f4f8fd; }
 .workbook-table .row-number { position: sticky; z-index: 2; left: 0; min-width: 48px; width: 48px; max-width: 48px; background: #f3f6f9; color: #7d8d9e; text-align: right; font-variant-numeric: tabular-nums; }
 .workbook-table thead .row-number { z-index: 4; }
+.workbook-result-pill { display: inline-flex; align-items: center; justify-content: center; min-width: 38px; padding: 3px 8px; border: 1px solid transparent; border-radius: 999px; font-weight: 850; line-height: 1.2; white-space: nowrap; }
+.workbook-result-pill.is-win { border-color: #bce7d2; background: #e8f7ef; color: #137a4a; }
+.workbook-result-pill.is-loss { border-color: #f2c5c5; background: #fff0f0; color: #c13f3f; }
+.workbook-result-pill.is-push { border-color: #cadbe8; background: #f0f5f9; color: #53728b; }
+.workbook-profit { font-weight: 850; font-variant-numeric: tabular-nums; }
+.workbook-profit.is-gain { color: #137a4a; }
+.workbook-profit.is-loss { color: #c13f3f; }
 .workbook-mobile-list { display: none; }
 .workbook-pagination { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 13px; }
 .workbook-pagination button { border: 1px solid #d9e3ec; border-radius: 10px; background: white; color: var(--navy); padding: 8px 13px; font-size: 11px; font-weight: 750; cursor: pointer; }

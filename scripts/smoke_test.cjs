@@ -8,6 +8,7 @@ const siteDir = path.dirname(dataPath);
 const dataSource = fs.readFileSync(dataPath, "utf8");
 const appSource = fs.readFileSync(appPath, "utf8");
 const indexSource = fs.readFileSync(path.join(siteDir, "index.html"), "utf8");
+const styleSource = fs.readFileSync(path.join(siteDir, "styles.css"), "utf8");
 const manifest = JSON.parse(fs.readFileSync(path.join(siteDir, "workbook", "manifest.json"), "utf8"));
 const workbookSheets = Object.fromEntries(
   manifest.sheets.map((sheet) => [
@@ -108,6 +109,8 @@ assert(matches.elements["match-count"].textContent.startsWith("显示 1 / 50"), 
 
 assert(indexSource.includes('data-tab="workbook"'), "Full-workbook navigation is missing");
 assert(appSource.includes("async function renderWorkbook()"), "Full-workbook renderer is missing");
+assert(appSource.includes("workbookDecoratedValue(header, row.cells[index])"), "Ledger result decoration is missing");
+assert(styleSource.includes(".workbook-result-pill.is-win") && styleSource.includes(".workbook-result-pill.is-loss"), "Ledger win/loss colors are missing");
 assert(manifest.validation.records === 1779, "Workbook record validation is wrong");
 assert(manifest.validation.descending === true, "Workbook descending validation is missing");
 assert(/^[a-f0-9]{64}$/.test(manifest.sha256), "Workbook SHA-256 is invalid");
