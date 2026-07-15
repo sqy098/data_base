@@ -190,25 +190,100 @@
     return '<em class="outcome-badge outcome-' + outcomeClass(result) + '"><i class="market-dot ' + market + '"></i><span>' + label + '</span><b>' + escapeHtml(value) + "</b></em>";
   }
 
-  function matchCard(match, open) {
+  function isSettledMatch(match) {
+    return String(match.status || "").trim() === "已结算";
+  }
+
+  function matchStage(match) {
+    const status = String(match.status || "").trim();
+    if (isSettledMatch(match)) return { label: "已结算", className: "settled", note: "结果已确认" };
+    if (status === "需复核") return { label: "需复核", className: "review", note: "等待人工核对" };
+    if (status === "进行中") return { label: "进行中", className: "live", note: "赛后自动结算" };
+    if (status === "延期" || status === "取消") return { label: status, className: "review", note: "暂不结算" };
+    return { label: "待结算", className: "pending", note: status || "等待赛果" };
+  }
+
+  function stageBadge(match) {
+    const stage = matchStage(match);
+    return '<span class="stage-badge stage-' + stage.className + '"><b>' + stage.label + '</b><small>' + stage.note + "</small></span>";
+  }
+
+  function scoreNode(match) {
+    if (isSettledMatch(match)) {
+      return '<span class="score-node score-final"><small>终场</small><b>' + displayValue(match.score) + "</b></span>";
+    }
+    return '<span class="score-node score-pending"><small>' + escapeHtml(matchStage(match).label) + '</small><b>VS</b></span>';
+  }
+
+  function marketSummaryCard(match, market) {
+    const settled = isSettledMatch(match);
+    const total = market === "total";
+    const label = marketLabel(market);
+    const pick = total ? match.totalPick : match.handicapPick;
+    const result = total ? match.totalResult : match.handicapResult;
+    const profit = total ? match.totalProfit : match.handicapProfit;
+
+    if (!settled) {
+      return (
+        '<section class="match-summary-card recommendation ' + marketClass(market) + '">' +
+          '<header><span><i class="market-dot ' + marketClass(market) + '"></i>' + label + '推荐</span><b>赛前结论</b></header>' +
+          '<p>' + displayValue(pick) + "</p>" +
+        "</section>"
+      );
+    }
+
+    const resultValue = String(result || "").trim() || "待复核";
     return (
-      '<details class="match-card"' + (open ? " open" : "") + ">" +
+      '<section class="match-summary-card settlement ' + marketClass(market) + ' outcome-' + outcomeClass(result) + '">' +
+        '<header><span><i class="market-dot ' + marketClass(market) + '"></i>' + label + '结算</span><small>原推荐：' + displayValue(pick) + "</small></header>" +
+        '<div class="settlement-result"><b>' + escapeHtml(resultValue) + "</b>" + profitNode(profit) + "</div>" +
+      "</section>"
+    );
+  }
+
+  function detailMarketCard(match, market) {
+    const settled = isSettledMatch(match);
+    const total = market === "total";
+    const label = marketLabel(market);
+    const pick = total ? match.totalPick : match.handicapPick;
+    const result = total ? match.totalResult : match.handicapResult;
+    const profit = total ? match.totalProfit : match.handicapProfit;
+    const footer = settled
+      ? '<footer class="settled-footer"><span>结算结果：<b class="result-text outcome-text-' + outcomeClass(result) + '">' + displayValue(result) + "</b></span>" + profitNode(profit) + "</footer>"
+      : '<footer class="pending-footer"><span>尚未结算</span><b>以此赛前推荐为准</b></footer>';
+    return (
+      '<section class="detail-market-card ' + marketClass(market) + (settled ? " is-settled" : " is-pending") + '">' +
+        '<header><i class="market-dot ' + marketClass(market) + '"></i><b>赛前' + label + "推荐</b></header>" +
+        '<p>' + displayValue(pick) + "</p>" +
+        footer +
+      "</section>"
+    );
+  }
+
+  function matchCard(match, open) {
+    const settled = isSettledMatch(match);
+    return (
+      '<details class="match-card ' + (settled ? "match-settled" : "match-unsettled") + '"' + (open ? " open" : "") + ">" +
         "<summary>" +
-          '<div class="match-top"><span>' + displayValue(match.date) + " · " + displayValue(match.league) + '</span><div class="outcome-badges">' + outcomeBadge("让球", match.handicapResult, "handicap") + outcomeBadge("大小球", match.totalResult, "total") + "</div></div>" +
-          '<div class="teams"><strong>' + displayValue(match.home) + "</strong><b>" + displayValue(match.score || "vs") + "</b><strong>" + displayValue(match.away) + "</strong></div>" +
-          '<div class="match-market-profit"><span><i class="market-dot handicap"></i>让球 ' + profitNode(match.handicapProfit) + '</span><span><i class="market-dot total"></i>大小球 ' + profitNode(match.totalProfit) + "</span></div>" +
-          '<div class="expand-hint"><span>查看详细信息</span><i></i></div>' +
+          '<div class="match-top"><span>' + displayValue(match.date) + " · " + displayValue(match.league) + "</span>" + stageBadge(match) + "</div>" +
+          '<div class="teams"><strong>' + displayValue(match.home) + "</strong>" + scoreNode(match) + "<strong>" + displayValue(match.away) + "</strong></div>" +
+          '<div class="outcome-badges outcome-badges-wide">' + outcomeBadge("让球", match.handicapResult, "handicap") + outcomeBadge("大小球", match.totalResult, "total") + "</div>" +
+          '<div class="match-summary-grid">' + marketSummaryCard(match, "handicap") + marketSummaryCard(match, "total") + "</div>" +
+          '<div class="expand-hint"><span>' + (settled ? "展开查看推荐与赛后备注" : "展开查看执行条件与完整信息") + "</span><i></i></div>" +
         "</summary>" +
         '<div class="match-details">' +
+          (settled
+            ? '<section class="settlement-hero"><div><span>终场比分</span><b>' + displayValue(match.score) + '</b></div><div><span>辅助总盈亏</span>' + profitNode(match.profit) + "</div></section>"
+            : '<section class="recommendation-banner"><b>赛前推荐</b><span>本场尚未结算，优先查看下方两项推荐及执行条件。</span></section>') +
           '<div class="detail-market-grid">' +
-            '<section class="detail-market-card handicap"><header><i class="market-dot handicap"></i><b>让球推荐</b></header><p>' + displayValue(match.handicapPick) + "</p><footer><span>结论：" + displayValue(match.handicapResult) + "</span>" + profitNode(match.handicapProfit) + "</footer></section>" +
-            '<section class="detail-market-card total"><header><i class="market-dot total"></i><b>大小球推荐</b></header><p>' + displayValue(match.totalPick) + "</p><footer><span>结论：" + displayValue(match.totalResult) + "</span>" + profitNode(match.totalProfit) + "</footer></section>" +
+            detailMarketCard(match, "handicap") +
+            detailMarketCard(match, "total") +
           "</div>" +
           '<div class="detail-grid">' +
             "<div><span>冻结时间</span><b>" + displayValue(match.frozenAt) + "</b></div>" +
-            "<div><span>终场比分</span><b>" + displayValue(match.score) + "</b></div>" +
-            "<div><span>辅助总盈亏</span>" + profitNode(match.profit) + "</div>" +
+            "<div><span>当前状态</span><b>" + displayValue(match.status) + "</b></div>" +
             "<div><span>数据来源</span><b>" + displayValue(match.source) + "</b></div>" +
+            "<div><span>记录类型</span><b>" + (settled ? "赛后结算" : "赛前分析") + "</b></div>" +
           "</div>" +
           '<section class="detail-text-block"><span>可选 / 加仓条件</span><p>' + displayValue(match.optional) + "</p></section>" +
           '<section class="detail-text-block"><span>总结结论备注</span><p>' + displayValue(match.note) + "</p></section>" +
@@ -220,12 +295,15 @@
 
   function renderMatches() {
     const latest = data.matches.slice(0, 50);
+    const settledCount = latest.filter(isSettledMatch).length;
+    const unsettledCount = latest.length - settledCount;
     const statuses = ["全部", "已冻结", "待赛果", "进行中", "已结算", "需复核", "延期", "取消"];
     view.innerHTML =
       '<section class="panel detail-panel">' +
-        panelHeading("比赛详情", "最新 50 场比赛", '<span class="unit-chip">点击展开</span>') +
+        panelHeading("比赛详情", "最新 50 场比赛", '<span class="unit-chip">待结算 ' + unsettledCount + " · 已结算 " + settledCount + "</span>") +
         '<div class="filters"><label class="search-box"><span>搜索</span><input data-match-query placeholder="球队或赛事" aria-label="搜索球队或赛事"></label>' +
         '<label class="status-select"><span>状态</span><select data-match-status aria-label="筛选比赛状态">' + statuses.map((item) => '<option value="' + item + '">' + item + "</option>").join("") + "</select></label></div>" +
+        '<div class="match-stage-legend"><span class="legend-recommendation"><i></i>未结算：优先看赛前推荐</span><span class="legend-settlement"><i></i>已结算：优先看赛果与盈亏</span></div>' +
         '<div class="match-list-header"><span>按北京时间开球时间倒序</span><b id="match-count"></b></div>' +
         '<div id="match-results"></div>' +
       "</section>";
