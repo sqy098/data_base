@@ -176,24 +176,25 @@
     });
   }
 
-  function statusClass(status) {
-    const classes = {
-      "已结算": "settled",
-      "进行中": "live",
-      "需复核": "review",
-      "已冻结": "frozen",
-      "待赛果": "pending-result",
-      "延期": "delayed",
-      "取消": "cancelled",
-    };
-    return classes[status] || "default";
+  function outcomeClass(result) {
+    const value = String(result || "").trim();
+    if (!value) return "pending-review";
+    if (value.includes("赢")) return "win";
+    if (value.includes("输")) return "loss";
+    if (value.includes("走")) return "push";
+    return "pending-review";
+  }
+
+  function outcomeBadge(label, result, market) {
+    const value = String(result || "").trim() || "待复核";
+    return '<em class="outcome-badge outcome-' + outcomeClass(result) + '"><i class="market-dot ' + market + '"></i><span>' + label + '</span><b>' + escapeHtml(value) + "</b></em>";
   }
 
   function matchCard(match, open) {
     return (
       '<details class="match-card"' + (open ? " open" : "") + ">" +
         "<summary>" +
-          '<div class="match-top"><span>' + displayValue(match.date) + " · " + displayValue(match.league) + '</span><em class="status status-' + statusClass(match.status) + '">' + displayValue(match.status) + "</em></div>" +
+          '<div class="match-top"><span>' + displayValue(match.date) + " · " + displayValue(match.league) + '</span><div class="outcome-badges">' + outcomeBadge("让球", match.handicapResult, "handicap") + outcomeBadge("大小球", match.totalResult, "total") + "</div></div>" +
           '<div class="teams"><strong>' + displayValue(match.home) + "</strong><b>" + displayValue(match.score || "vs") + "</b><strong>" + displayValue(match.away) + "</strong></div>" +
           '<div class="match-market-profit"><span><i class="market-dot handicap"></i>让球 ' + profitNode(match.handicapProfit) + '</span><span><i class="market-dot total"></i>大小球 ' + profitNode(match.totalProfit) + "</span></div>" +
           '<div class="expand-hint"><span>查看详细信息</span><i></i></div>' +

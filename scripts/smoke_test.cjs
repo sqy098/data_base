@@ -77,6 +77,10 @@ assert(team.elements["ranking-results"].innerHTML.includes("ranking-row"), "Team
 
 const matches = render("#matches");
 assert((matches.elements["match-results"].innerHTML.match(/match-card/g) || []).length === 50, "Expected 50 match cards");
+assert(matches.elements["match-results"].innerHTML.includes("让球</span><b>待复核"), "Pending handicap badge is missing");
+assert(matches.elements["match-results"].innerHTML.includes("大小球</span><b>待复核"), "Pending total badge is missing");
+assert(matches.elements["match-results"].innerHTML.includes("让球</span><b>赢"), "Settled handicap badge is missing");
+assert(matches.elements["match-results"].innerHTML.includes("大小球</span><b>赢半"), "Settled total badge is missing");
 matches.controls.matchQuery.value = "浙江队";
 matches.controls.matchQuery.listeners.input();
 assert(matches.elements["match-results"].innerHTML.includes("青岛海牛"), "Latest Zhejiang match is missing");

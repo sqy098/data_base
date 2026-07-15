@@ -140,14 +140,17 @@ h2 { margin: 0; color: var(--navy); font-size: 20px; letter-spacing: -.02em; }
 .match-card[open] { border-color: #cddcf0; box-shadow: 0 10px 24px rgba(16,42,67,.075); }
 .match-card > summary { list-style: none; padding: 15px 16px 12px; cursor: pointer; }
 .match-card > summary::-webkit-details-marker { display: none; }
-.match-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; color: var(--muted); font-size: 11px; }
-.status { padding: 4px 8px; border-radius: 999px; background: #eef2f6; color: #62758a; font-style: normal; white-space: nowrap; }
-.status-settled { background: #e7f7ef; color: #177a4d; }
-.status-live { background: #e8f2ff; color: #1d67b7; }
-.status-review { background: #fff4e5; color: #b45309; }
-.status-frozen { background: #edf4ff; color: #2b67a5; }
-.status-pending-result { background: #f0edff; color: #654db4; }
-.status-delayed, .status-cancelled { background: #feecec; color: #b43535; }
+.match-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; color: var(--muted); font-size: 11px; }
+.match-top > span { min-width: 0; padding-top: 4px; }
+.outcome-badges { display: flex; flex: 0 0 auto; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
+.outcome-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 7px; border: 1px solid #e2e8f0; border-radius: 999px; background: #f8fafc; color: #63758a; font-style: normal; white-space: nowrap; }
+.outcome-badge span { font-size: 10px; font-weight: 700; }
+.outcome-badge b { font-size: 10px; font-weight: 800; }
+.outcome-badge .market-dot { width: 6px; height: 6px; }
+.outcome-win { border-color: #cdebdc; background: #eaf8f1; color: #177a4d; }
+.outcome-loss { border-color: #f5d1d1; background: #fff0f0; color: #b83c3c; }
+.outcome-push { border-color: #d4e2f1; background: #eef5fb; color: #416b8d; }
+.outcome-pending-review { border-color: #f2dec1; background: #fff7e9; color: #a76210; }
 .teams { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; padding: 16px 0 12px; }
 .teams strong { min-width: 0; color: var(--ink); font-size: 14px; overflow-wrap: anywhere; }
 .teams strong:last-child { text-align: right; }
@@ -207,6 +210,8 @@ noscript { display: block; padding: 20px; text-align: center; color: var(--red);
   .result-count { padding-left: 2px; }
   .filters { grid-template-columns: 1fr; }
   .match-list-header { align-items: flex-start; }
+  .match-top { display: grid; grid-template-columns: 1fr; }
+  .outcome-badges { justify-content: flex-start; }
   .match-card > summary, .match-details { padding: 13px; }
   .detail-market-grid { grid-template-columns: 1fr; }
   .detail-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
