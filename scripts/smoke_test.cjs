@@ -66,6 +66,8 @@ const overview = render("#overview");
 assert((overview.elements["kpi-grid"].innerHTML.match(/kpi-card/g) || []).length === 6, "Expected six KPI cards");
 assert(overview.elements["kpi-grid"].innerHTML.includes("1,779"), "Expected latest match count");
 assert(overview.elements.view.innerHTML.includes("近 6 个月让球盈亏"), "Overview chart missing");
+assert(overview.elements.view.innerHTML.includes("23:30"), "Rolling-window settlement time is missing");
+assert(overview.elements.view.innerHTML.includes("上一完整19点窗口"), "Rolling-window settlement description is missing");
 
 const league = render("#league");
 assert(league.elements.view.innerHTML.includes("让球盈亏排名"), "League view missing");
