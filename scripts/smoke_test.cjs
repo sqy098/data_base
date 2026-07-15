@@ -76,8 +76,13 @@ function assert(condition, message) {
 }
 
 const overview = render("#overview");
+const expectedMatchCount = overview.data.totals.matches;
+assert(Number.isInteger(expectedMatchCount) && expectedMatchCount > 0, "Dashboard match count is invalid");
 assert((overview.elements["kpi-grid"].innerHTML.match(/kpi-card/g) || []).length === 6, "Expected six KPI cards");
-assert(overview.elements["kpi-grid"].innerHTML.includes("1,779"), "Expected latest match count");
+assert(
+  overview.elements["kpi-grid"].innerHTML.includes(expectedMatchCount.toLocaleString("en-US")),
+  "Expected latest match count"
+);
 assert(overview.elements.view.innerHTML.includes("近 6 个月让球盈亏"), "Overview chart missing");
 assert(overview.elements.view.innerHTML.includes("23:30"), "Rolling-window settlement time is missing");
 assert(overview.elements.view.innerHTML.includes("上一完整19点窗口"), "Rolling-window settlement description is missing");
@@ -111,13 +116,16 @@ assert(indexSource.includes('data-tab="workbook"'), "Full-workbook navigation is
 assert(appSource.includes("async function renderWorkbook()"), "Full-workbook renderer is missing");
 assert(appSource.includes("workbookDecoratedValue(header, row.cells[index])"), "Ledger result decoration is missing");
 assert(styleSource.includes(".workbook-result-pill.is-win") && styleSource.includes(".workbook-result-pill.is-loss"), "Ledger win/loss colors are missing");
-assert(manifest.validation.records === 1779, "Workbook record validation is wrong");
+assert(manifest.validation.records === expectedMatchCount, "Workbook record validation is wrong");
 assert(manifest.validation.descending === true, "Workbook descending validation is missing");
 assert(/^[a-f0-9]{64}$/.test(manifest.sha256), "Workbook SHA-256 is invalid");
 assert(manifest.sheets.length === 4, "Expected four workbook sheets");
 assert(["dashboard", "matches", "dictionary", "dimensions"].every((slug) => workbookSheets[slug]), "A workbook sheet export is missing");
 assert(workbookSheets.matches.headerRow === 4 && workbookSheets.matches.dataStartRow === 5, "Ledger header metadata is wrong");
-assert(workbookSheets.matches.rows.filter((row) => row.number >= 5).length === 1779, "Full ledger export is incomplete");
+assert(
+  workbookSheets.matches.rows.filter((row) => row.number >= 5).length === expectedMatchCount,
+  "Full ledger export is incomplete"
+);
 assert(workbookSheets.matches.rows.find((row) => row.number === 4).cells.includes("状态"), "Ledger status column is missing");
 assert(workbookSheets.dictionary.rows.length >= 150, "Event dictionary export is incomplete");
 assert(workbookSheets.dimensions.rowCount === 1305 && workbookSheets.dimensions.rows.length >= 1200, "Dimension record export is incomplete");
