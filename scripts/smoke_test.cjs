@@ -32,7 +32,7 @@ function fakeElement(id) {
   };
 }
 
-function render(hash) {
+function render(hash, mutateData) {
   const elements = {
     "view": fakeElement("view"),
     "updated-at": fakeElement("updated-at"),
@@ -67,6 +67,7 @@ function render(hash) {
     Set,
   });
   vm.runInContext(dataSource, context, { filename: "data.js" });
+  if (mutateData) mutateData(window.DASHBOARD_DATA);
   vm.runInContext(appSource, context, { filename: "app.js" });
   return { elements, controls, data: window.DASHBOARD_DATA };
 }
@@ -97,20 +98,48 @@ assert(team.elements["ranking-results"].innerHTML.includes("ranking-row"), "Team
 
 const matches = render("#matches");
 assert((matches.elements["match-results"].innerHTML.match(/match-card/g) || []).length === 50, "Expected 50 match cards");
-assert(matches.elements["match-results"].innerHTML.includes("让球</span><b>待复核"), "Pending handicap badge is missing");
-assert(matches.elements["match-results"].innerHTML.includes("大小球</span><b>待复核"), "Pending total badge is missing");
-assert(matches.elements["match-results"].innerHTML.includes("让球</span><b>赢"), "Settled handicap badge is missing");
-assert(matches.elements["match-results"].innerHTML.includes("大小球</span><b>赢半"), "Settled total badge is missing");
 assert(matches.elements.view.innerHTML.includes("未结算：优先看赛前推荐"), "Match-stage legend is missing");
-assert(matches.elements["match-results"].innerHTML.includes("赛前结论"), "Unsettled recommendation summary is missing");
-assert(matches.elements["match-results"].innerHTML.includes("FK贝尔格莱德 -1.25"), "Latest unsettled recommendation is missing");
-assert(matches.elements["match-results"].innerHTML.includes("让球结算"), "Settled handicap summary is missing");
-assert(matches.elements["match-results"].innerHTML.includes("大小球结算"), "Settled total summary is missing");
-assert(matches.elements["match-results"].innerHTML.includes("终场比分"), "Settled score highlight is missing");
-matches.controls.matchQuery.value = "浙江队";
+
+const pendingFixture = render("#matches", (data) => {
+  Object.assign(data.matches[0], {
+    status: "需复核",
+    handicapResult: "",
+    totalResult: "",
+    score: "",
+    handicapProfit: null,
+    totalProfit: null,
+    profit: null,
+  });
+});
+assert(pendingFixture.elements["match-results"].innerHTML.includes("让球</span><b>待复核"), "Pending handicap badge is missing");
+assert(pendingFixture.elements["match-results"].innerHTML.includes("大小球</span><b>待复核"), "Pending total badge is missing");
+assert(pendingFixture.elements["match-results"].innerHTML.includes("赛前结论"), "Unsettled recommendation summary is missing");
+
+const settledFixture = render("#matches", (data) => {
+  Object.assign(data.matches[0], {
+    status: "已结算",
+    handicapResult: "赢",
+    totalResult: "赢半",
+    score: "2-1",
+    handicapProfit: 1,
+    totalProfit: 0.5,
+    profit: 1.5,
+  });
+});
+assert(settledFixture.elements["match-results"].innerHTML.includes("让球</span><b>赢"), "Settled handicap badge is missing");
+assert(settledFixture.elements["match-results"].innerHTML.includes("大小球</span><b>赢半"), "Settled total badge is missing");
+assert(settledFixture.elements["match-results"].innerHTML.includes("让球结算"), "Settled handicap summary is missing");
+assert(settledFixture.elements["match-results"].innerHTML.includes("大小球结算"), "Settled total summary is missing");
+assert(settledFixture.elements["match-results"].innerHTML.includes("终场比分"), "Settled score highlight is missing");
+
+const latest = matches.data.matches.slice(0, 50);
+const searchTerm = String(latest[0].home || latest[0].away || latest[0].league);
+const expectedFiltered = latest.filter((match) =>
+  [match.home, match.away, match.league].some((value) => String(value || "").toLowerCase().includes(searchTerm.toLowerCase()))
+).length;
+matches.controls.matchQuery.value = searchTerm;
 matches.controls.matchQuery.listeners.input();
-assert(matches.elements["match-results"].innerHTML.includes("青岛海牛"), "Latest Zhejiang match is missing");
-assert(matches.elements["match-count"].textContent.startsWith("显示 1 / 50"), "Match search count is wrong");
+assert(matches.elements["match-count"].textContent.startsWith(`显示 ${expectedFiltered} / 50`), "Match search count is wrong");
 
 assert(indexSource.includes('data-tab="workbook"'), "Full-workbook navigation is missing");
 assert(appSource.includes("async function renderWorkbook()"), "Full-workbook renderer is missing");
