@@ -81,6 +81,12 @@ assert(matches.elements["match-results"].innerHTML.includes("让球</span><b>待
 assert(matches.elements["match-results"].innerHTML.includes("大小球</span><b>待复核"), "Pending total badge is missing");
 assert(matches.elements["match-results"].innerHTML.includes("让球</span><b>赢"), "Settled handicap badge is missing");
 assert(matches.elements["match-results"].innerHTML.includes("大小球</span><b>赢半"), "Settled total badge is missing");
+assert(matches.elements.view.innerHTML.includes("未结算：优先看赛前推荐"), "Match-stage legend is missing");
+assert(matches.elements["match-results"].innerHTML.includes("赛前结论"), "Unsettled recommendation summary is missing");
+assert(matches.elements["match-results"].innerHTML.includes("FK贝尔格莱德 -1.25"), "Latest unsettled recommendation is missing");
+assert(matches.elements["match-results"].innerHTML.includes("让球结算"), "Settled handicap summary is missing");
+assert(matches.elements["match-results"].innerHTML.includes("大小球结算"), "Settled total summary is missing");
+assert(matches.elements["match-results"].innerHTML.includes("终场比分"), "Settled score highlight is missing");
 matches.controls.matchQuery.value = "浙江队";
 matches.controls.matchQuery.listeners.input();
 assert(matches.elements["match-results"].innerHTML.includes("青岛海牛"), "Latest Zhejiang match is missing");
