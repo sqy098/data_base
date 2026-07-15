@@ -120,7 +120,7 @@
         '<article class="panel mini-ranking">' + panelHeading("球队 · 让球", "让球盈亏 Top 5", '<button type="button" data-go="team" data-go-market="handicap">查看全部</button>') + rankingList(data.teamHandicap, "handicap", 5) + "</article>" +
         '<article class="panel mini-ranking">' + panelHeading("球队 · 大小球", "大小球盈亏 Top 5", '<button type="button" data-go="team" data-go-market="total">查看全部</button>', true) + rankingList(data.teamTotals, "total", 5) + "</article>" +
       "</section>" +
-      '<section class="schedule-card"><div><span>15:00</span><p>结算前一日比赛并分市场汇总</p></div><div class="schedule-line"></div><div><span>19:00</span><p>录入次日全部可靠盘口比赛</p></div></section>';
+      '<section class="schedule-card"><div><span>19:00</span><p>录入未来24小时全部可靠盘口比赛</p></div><div class="schedule-line"></div><div><span>23:30</span><p>结算上一完整19点窗口并补结积压场次</p></div></section>';
 
     view.querySelectorAll("[data-go]").forEach((button) => {
       button.addEventListener("click", () => {
