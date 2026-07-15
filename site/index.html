@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#102a43" />
     <meta name="description" content="足球比赛让球与大小球独立盈亏分析看板" />
     <title>足球战绩看板</title>
-    <link rel="stylesheet" href="./styles.css?v=20260715-result-focus" />
+    <link rel="stylesheet" href="./styles.css?v=20260715-full-workbook" />
   </head>
   <body>
     <main class="app-shell">
@@ -31,6 +31,7 @@
           <button type="button" data-tab="league">赛事</button>
           <button type="button" data-tab="team">球队</button>
           <button type="button" data-tab="matches">最新50</button>
+          <button type="button" data-tab="workbook">完整台账</button>
         </nav>
 
         <div id="view" aria-live="polite"></div>
@@ -41,11 +42,12 @@
         <button type="button" data-tab="league"><i></i>赛事</button>
         <button type="button" data-tab="team"><i></i>球队</button>
         <button type="button" data-tab="matches"><i></i>最新50</button>
+        <button type="button" data-tab="workbook"><i></i>全台账</button>
       </nav>
     </main>
 
     <noscript>请启用 JavaScript 查看交互式看板。</noscript>
     <script src="./data.js"></script>
-    <script src="./app.js?v=20260715-rolling-2330"></script>
+    <script src="./app.js?v=20260715-full-workbook"></script>
   </body>
 </html>

@@ -3,12 +3,20 @@
 
   const data = window.DASHBOARD_DATA;
   const view = document.getElementById("view");
-  const validTabs = new Set(["overview", "league", "team", "matches"]);
+  const validTabs = new Set(["overview", "league", "team", "matches", "workbook"]);
   const initialTab = window.location.hash.replace("#", "");
   const state = {
     activeTab: validTabs.has(initialTab) ? initialTab : "overview",
     leagueMarket: "handicap",
     teamMarket: "handicap",
+    workbookManifest: null,
+    workbookSheets: {},
+    workbookSheet: "matches",
+    workbookQuery: "",
+    workbookStatus: "全部",
+    workbookPage: 1,
+    workbookPageSize: 50,
+    workbookRenderToken: 0,
   };
 
   function escapeHtml(value) {
@@ -329,6 +337,200 @@
     status.addEventListener("change", refresh);
   }
 
+  function formatBytes(value) {
+    const bytes = Number(value || 0);
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / 1024 / 1024).toFixed(2) + " MB";
+  }
+
+  function workbookCellText(value) {
+    if (value == null) return "";
+    if (typeof value === "number") return Number.isInteger(value) ? String(value) : String(Number(value.toFixed(4)));
+    return String(value);
+  }
+
+  function workbookHeaders(sheet) {
+    if (!sheet.headerRow) return sheet.columns.slice();
+    const header = sheet.rows.find((row) => row.number === sheet.headerRow);
+    return sheet.columns.map((column, index) => workbookCellText(header && header.cells[index]) || column);
+  }
+
+  function workbookDataRows(sheet) {
+    const start = sheet.headerRow ? sheet.dataStartRow : 1;
+    return sheet.rows.filter((row) => row.number >= start);
+  }
+
+  function workbookNotes(sheet) {
+    if (!sheet.headerRow) return [];
+    return sheet.rows
+      .filter((row) => row.number < sheet.headerRow)
+      .map((row) => row.cells.map(workbookCellText).find((value) => value.trim()))
+      .filter((value, index, all) => value && all.indexOf(value) === index);
+  }
+
+  function workbookPrimaryText(sheet, headers, row) {
+    const values = Object.fromEntries(headers.map((header, index) => [header, workbookCellText(row.cells[index])]));
+    if (sheet.slug === "matches") {
+      return {
+        title: (values["主队"] || "—") + " vs " + (values["客队"] || "—"),
+        subtitle: [values["开球时间"], values["赛事"], values["状态"]].filter(Boolean).join(" · "),
+      };
+    }
+    if (sheet.slug === "dictionary") {
+      return {
+        title: values["原赛事名称"] || values["规范赛事名称"] || "第 " + row.number + " 行",
+        subtitle: values["规范赛事名称"] || values["维护状态"] || "",
+      };
+    }
+    const present = row.cells.map(workbookCellText).filter((value) => value.trim());
+    return { title: present[0] || "第 " + row.number + " 行", subtitle: present.slice(1, 3).join(" · ") };
+  }
+
+  function renderWorkbookRows(sheet) {
+    const results = document.getElementById("workbook-results");
+    const count = document.getElementById("workbook-count");
+    const pagination = document.getElementById("workbook-pagination");
+    if (!results || !count || !pagination) return;
+
+    const headers = workbookHeaders(sheet);
+    const statusIndex = headers.indexOf("状态");
+    const term = state.workbookQuery.trim().toLowerCase();
+    const filtered = workbookDataRows(sheet).filter((row) => {
+      const matchesQuery = !term || row.cells.some((value) => workbookCellText(value).toLowerCase().includes(term));
+      const matchesStatus = state.workbookStatus === "全部" || statusIndex < 0 || workbookCellText(row.cells[statusIndex]) === state.workbookStatus;
+      return matchesQuery && matchesStatus;
+    });
+
+    const pages = Math.max(1, Math.ceil(filtered.length / state.workbookPageSize));
+    state.workbookPage = Math.min(Math.max(1, state.workbookPage), pages);
+    const start = (state.workbookPage - 1) * state.workbookPageSize;
+    const visible = filtered.slice(start, start + state.workbookPageSize);
+    const end = Math.min(start + visible.length, filtered.length);
+
+    count.textContent = filtered.length
+      ? "显示 " + (start + 1) + "–" + end + " / " + filtered.length + " 行"
+      : "显示 0 行";
+
+    const table =
+      '<div class="workbook-table-wrap"><table class="workbook-table"><thead><tr><th class="row-number">行</th>' +
+      headers.map((header, index) => '<th title="' + escapeHtml(header) + '"><small>' + escapeHtml(sheet.columns[index]) + "</small>" + escapeHtml(header) + "</th>").join("") +
+      "</tr></thead><tbody>" +
+      visible.map((row) =>
+        '<tr><th class="row-number">' + row.number + "</th>" +
+        headers.map((_, index) => '<td title="' + escapeHtml(workbookCellText(row.cells[index])) + '">' + displayValue(workbookCellText(row.cells[index])) + "</td>").join("") +
+        "</tr>"
+      ).join("") +
+      "</tbody></table></div>";
+
+    const cards = '<div class="workbook-mobile-list">' + visible.map((row, rowIndex) => {
+      const primary = workbookPrimaryText(sheet, headers, row);
+      return (
+        '<details class="workbook-row-card"' + (rowIndex === 0 ? " open" : "") + ">" +
+          '<summary><span>第 ' + row.number + " 行</span><b>" + escapeHtml(primary.title) + "</b><small>" + escapeHtml(primary.subtitle) + "</small></summary>" +
+          '<div class="workbook-card-grid">' + headers.map((header, index) =>
+            '<div><span>' + escapeHtml(sheet.columns[index] + " · " + header) + "</span><p>" + displayValue(workbookCellText(row.cells[index])) + "</p></div>"
+          ).join("") + "</div>" +
+        "</details>"
+      );
+    }).join("") + "</div>";
+
+    results.innerHTML = visible.length
+      ? table + cards
+      : '<div class="empty-state compact"><div class="empty-mark">0</div><h3>暂无匹配数据</h3><p>可调整关键词、状态或工作表。</p></div>';
+    pagination.innerHTML =
+      '<button type="button" data-workbook-page="prev"' + (state.workbookPage <= 1 ? " disabled" : "") + '>上一页</button>' +
+      '<span>第 ' + state.workbookPage + " / " + pages + " 页</span>" +
+      '<button type="button" data-workbook-page="next"' + (state.workbookPage >= pages ? " disabled" : "") + '>下一页</button>';
+    pagination.querySelectorAll("[data-workbook-page]").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.workbookPage += button.dataset.workbookPage === "next" ? 1 : -1;
+        renderWorkbookRows(sheet);
+        window.scrollTo({ top: document.getElementById("workbook-results").offsetTop - 90, behavior: "smooth" });
+      });
+    });
+  }
+
+  async function fetchWorkbookJson(path) {
+    const response = await fetch(path, { cache: "no-cache" });
+    if (!response.ok) throw new Error("无法读取 " + path);
+    return response.json();
+  }
+
+  async function renderWorkbook() {
+    const token = ++state.workbookRenderToken;
+    view.innerHTML = '<section class="panel detail-panel workbook-panel"><div class="workbook-loading"><span></span><b>正在载入完整 Excel 数据…</b></div></section>';
+    try {
+      if (!state.workbookManifest) {
+        state.workbookManifest = await fetchWorkbookJson("./workbook/manifest.json");
+      }
+      const manifest = state.workbookManifest;
+      const activeMeta = manifest.sheets.find((sheet) => sheet.slug === state.workbookSheet) || manifest.sheets[0];
+      state.workbookSheet = activeMeta.slug;
+      if (!state.workbookSheets[activeMeta.slug]) {
+        state.workbookSheets[activeMeta.slug] = await fetchWorkbookJson(activeMeta.file);
+      }
+      if (token !== state.workbookRenderToken || state.activeTab !== "workbook") return;
+
+      const sheet = state.workbookSheets[activeMeta.slug];
+      const headers = workbookHeaders(sheet);
+      const statusIndex = headers.indexOf("状态");
+      const statuses = statusIndex >= 0
+        ? ["全部", ...new Set(workbookDataRows(sheet).map((row) => workbookCellText(row.cells[statusIndex])).filter(Boolean))]
+        : [];
+      const notes = workbookNotes(sheet);
+
+      view.innerHTML =
+        '<section class="panel detail-panel workbook-panel">' +
+          panelHeading("完整工作簿", "Excel 全量数据", '<a class="excel-download" href="' + escapeHtml(manifest.downloadPath) + '" download>下载最新版 Excel</a>') +
+          '<div class="workbook-meta"><span>校验通过 · ' + formatCount(manifest.validation.records) + " 场 · 开球时间倒序</span><span>" + formatBytes(manifest.sizeBytes) + " · SHA " + escapeHtml(manifest.sha256.slice(0, 10)) + "</span></div>" +
+          '<div class="workbook-sheet-tabs" role="tablist">' + manifest.sheets.map((item) =>
+            '<button type="button" data-workbook-sheet="' + escapeHtml(item.slug) + '" class="' + (item.slug === activeMeta.slug ? "active" : "") + '">' + escapeHtml(item.name) + '<small>' + formatCount(item.nonemptyRows) + " 行</small></button>"
+          ).join("") + "</div>" +
+          (notes.length ? '<div class="workbook-notes">' + notes.map((note) => "<p>" + escapeHtml(note) + "</p>").join("") + "</div>" : "") +
+          '<div class="workbook-toolbar"><label class="search-box"><span>搜索</span><input data-workbook-query value="' + escapeHtml(state.workbookQuery) + '" placeholder="搜索当前工作表全部字段"></label>' +
+          (statuses.length ? '<label class="status-select"><span>状态</span><select data-workbook-status>' + statuses.map((item) => '<option value="' + escapeHtml(item) + '"' + (item === state.workbookStatus ? " selected" : "") + ">" + escapeHtml(item) + "</option>").join("") + "</select></label>" : "") +
+          '<label class="status-select page-size"><span>每页</span><select data-workbook-page-size>' + [50, 100, 200].map((size) => '<option value="' + size + '"' + (size === state.workbookPageSize ? " selected" : "") + ">" + size + " 行</option>").join("") + "</select></label></div>" +
+          '<div class="workbook-result-header"><span>' + escapeHtml(activeMeta.usedRange) + ' · 全部列均已载入</span><b id="workbook-count"></b></div>' +
+          '<div id="workbook-results"></div><div class="workbook-pagination" id="workbook-pagination"></div>' +
+        "</section>";
+
+      view.querySelectorAll("[data-workbook-sheet]").forEach((button) => {
+        button.addEventListener("click", () => {
+          state.workbookSheet = button.dataset.workbookSheet;
+          state.workbookQuery = "";
+          state.workbookStatus = "全部";
+          state.workbookPage = 1;
+          renderWorkbook();
+        });
+      });
+      const query = view.querySelector("[data-workbook-query]");
+      query.addEventListener("input", () => {
+        state.workbookQuery = query.value;
+        state.workbookPage = 1;
+        renderWorkbookRows(sheet);
+      });
+      const status = view.querySelector("[data-workbook-status]");
+      if (status) {
+        status.addEventListener("change", () => {
+          state.workbookStatus = status.value;
+          state.workbookPage = 1;
+          renderWorkbookRows(sheet);
+        });
+      }
+      const pageSize = view.querySelector("[data-workbook-page-size]");
+      pageSize.addEventListener("change", () => {
+        state.workbookPageSize = Number(pageSize.value);
+        state.workbookPage = 1;
+        renderWorkbookRows(sheet);
+      });
+      renderWorkbookRows(sheet);
+    } catch (error) {
+      if (token !== state.workbookRenderToken) return;
+      view.innerHTML = '<section class="panel empty-state"><div class="empty-mark">!</div><h3>完整台账载入失败</h3><p>' + escapeHtml(error && error.message ? error.message : "请稍后刷新页面") + "</p></section>";
+    }
+  }
+
   function renderView() {
     document.querySelectorAll("[data-tab]").forEach((button) => {
       button.classList.toggle("active", button.dataset.tab === state.activeTab);
@@ -337,6 +539,7 @@
     if (state.activeTab === "league") renderRanking("league");
     if (state.activeTab === "team") renderRanking("team");
     if (state.activeTab === "matches") renderMatches();
+    if (state.activeTab === "workbook") renderWorkbook();
   }
 
   function setTab(tab) {

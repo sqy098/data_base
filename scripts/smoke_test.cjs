@@ -1,8 +1,20 @@
 const fs = require("fs");
+const path = require("path");
 const vm = require("vm");
 
-const dataSource = fs.readFileSync(process.argv[2] || "site/data.js", "utf8");
-const appSource = fs.readFileSync(process.argv[3] || "site/app.js", "utf8");
+const dataPath = path.resolve(process.argv[2] || "site/data.js");
+const appPath = path.resolve(process.argv[3] || "site/app.js");
+const siteDir = path.dirname(dataPath);
+const dataSource = fs.readFileSync(dataPath, "utf8");
+const appSource = fs.readFileSync(appPath, "utf8");
+const indexSource = fs.readFileSync(path.join(siteDir, "index.html"), "utf8");
+const manifest = JSON.parse(fs.readFileSync(path.join(siteDir, "workbook", "manifest.json"), "utf8"));
+const workbookSheets = Object.fromEntries(
+  manifest.sheets.map((sheet) => [
+    sheet.slug,
+    JSON.parse(fs.readFileSync(path.join(siteDir, "workbook", path.basename(sheet.file)), "utf8")),
+  ])
+);
 
 function fakeElement(id) {
   return {
@@ -94,10 +106,25 @@ matches.controls.matchQuery.listeners.input();
 assert(matches.elements["match-results"].innerHTML.includes("青岛海牛"), "Latest Zhejiang match is missing");
 assert(matches.elements["match-count"].textContent.startsWith("显示 1 / 50"), "Match search count is wrong");
 
+assert(indexSource.includes('data-tab="workbook"'), "Full-workbook navigation is missing");
+assert(appSource.includes("async function renderWorkbook()"), "Full-workbook renderer is missing");
+assert(manifest.validation.records === 1779, "Workbook record validation is wrong");
+assert(manifest.validation.descending === true, "Workbook descending validation is missing");
+assert(/^[a-f0-9]{64}$/.test(manifest.sha256), "Workbook SHA-256 is invalid");
+assert(manifest.sheets.length === 4, "Expected four workbook sheets");
+assert(["dashboard", "matches", "dictionary", "dimensions"].every((slug) => workbookSheets[slug]), "A workbook sheet export is missing");
+assert(workbookSheets.matches.headerRow === 4 && workbookSheets.matches.dataStartRow === 5, "Ledger header metadata is wrong");
+assert(workbookSheets.matches.rows.filter((row) => row.number >= 5).length === 1779, "Full ledger export is incomplete");
+assert(workbookSheets.matches.rows.find((row) => row.number === 4).cells.includes("状态"), "Ledger status column is missing");
+assert(workbookSheets.dictionary.rows.length >= 150, "Event dictionary export is incomplete");
+assert(workbookSheets.dimensions.rowCount === 1305 && workbookSheets.dimensions.rows.length >= 1200, "Dimension record export is incomplete");
+
 console.log(JSON.stringify({
   ok: true,
   totals: matches.data.totals,
   latestMatches: matches.data.matches.length,
+  fullWorkbookMatches: manifest.validation.records,
+  workbookSheets: manifest.sheets.map((sheet) => sheet.name),
   zhejiangMatch: true,
-  views: ["overview", "league", "team", "matches"],
+  views: ["overview", "league", "team", "matches", "workbook"],
 }));

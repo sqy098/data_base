@@ -239,6 +239,41 @@ h2 { margin: 0; color: var(--navy); font-size: 20px; letter-spacing: -.02em; }
 .detail-text-block p { margin: 0; color: #465c70; font-size: 11px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
 .source-key p { color: #75869a; font-family: ui-monospace,SFMono-Regular,Consolas,monospace; font-size: 10px; }
 
+.workbook-panel { min-width: 0; }
+.excel-download { display: inline-flex; align-items: center; justify-content: center; border: 1px solid #cfe0f7; border-radius: 999px; background: #edf5ff; color: #2468be; padding: 7px 11px; font-size: 11px; font-weight: 800; text-decoration: none; white-space: nowrap; }
+.excel-download:hover { border-color: #9fc2ed; background: #e2efff; }
+.workbook-meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; padding: 10px 12px; border: 1px solid #dce8f4; border-radius: 12px; background: linear-gradient(135deg,#f4f8fd,#f8fbff); color: #60758a; font-size: 10px; font-weight: 700; }
+.workbook-sheet-tabs { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 7px; margin-top: 12px; padding: 5px; border: 1px solid var(--line); border-radius: 14px; background: #f5f8fb; }
+.workbook-sheet-tabs button { min-width: 0; border: 0; border-radius: 10px; background: transparent; color: #64768a; padding: 9px 8px; font-size: 11px; font-weight: 800; cursor: pointer; }
+.workbook-sheet-tabs button small { display: block; margin-top: 3px; color: #93a1b0; font-size: 9px; font-weight: 650; }
+.workbook-sheet-tabs button.active { background: white; color: var(--navy); box-shadow: 0 5px 14px rgba(16,42,67,.1); }
+.workbook-sheet-tabs button.active small { color: var(--blue); }
+.workbook-notes { margin-top: 10px; padding: 10px 12px; border-left: 3px solid var(--blue); border-radius: 4px 11px 11px 4px; background: #f4f8fd; }
+.workbook-notes p { margin: 0; color: #61758a; font-size: 10px; line-height: 1.55; }
+.workbook-notes p + p { margin-top: 3px; }
+.workbook-toolbar { display: grid; grid-template-columns: minmax(0,1fr) 170px 130px; gap: 8px; margin-top: 12px; }
+.workbook-toolbar .page-size select { text-align: right; }
+.workbook-result-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 12px 1px 8px; color: #8493a4; font-size: 10px; }
+.workbook-result-header b { color: var(--navy); font-size: 11px; }
+.workbook-table-wrap { max-height: 68vh; overflow: auto; border: 1px solid #dfe7ef; border-radius: 13px; background: white; overscroll-behavior: contain; }
+.workbook-table { min-width: 100%; border-collapse: separate; border-spacing: 0; color: var(--ink); font-size: 10px; }
+.workbook-table th, .workbook-table td { max-width: 340px; min-width: 105px; padding: 8px 9px; border-right: 1px solid #edf1f5; border-bottom: 1px solid #edf1f5; text-align: left; vertical-align: top; line-height: 1.5; overflow-wrap: anywhere; }
+.workbook-table thead th { position: sticky; z-index: 3; top: 0; background: #eef4fa; color: var(--navy); font-size: 10px; font-weight: 800; box-shadow: 0 1px 0 #dce5ee; }
+.workbook-table thead th small { display: block; margin-bottom: 2px; color: #7e91a4; font-size: 8px; }
+.workbook-table tbody tr:nth-child(even) td, .workbook-table tbody tr:nth-child(even) .row-number { background: #fbfcfe; }
+.workbook-table tbody tr:hover td { background: #f4f8fd; }
+.workbook-table .row-number { position: sticky; z-index: 2; left: 0; min-width: 48px; width: 48px; max-width: 48px; background: #f3f6f9; color: #7d8d9e; text-align: right; font-variant-numeric: tabular-nums; }
+.workbook-table thead .row-number { z-index: 4; }
+.workbook-mobile-list { display: none; }
+.workbook-pagination { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 13px; }
+.workbook-pagination button { border: 1px solid #d9e3ec; border-radius: 10px; background: white; color: var(--navy); padding: 8px 13px; font-size: 11px; font-weight: 750; cursor: pointer; }
+.workbook-pagination button:disabled { cursor: default; opacity: .42; }
+.workbook-pagination span { color: #728397; font-size: 10px; font-weight: 700; }
+.workbook-loading { min-height: 300px; display: grid; place-content: center; justify-items: center; gap: 12px; color: #6f8296; }
+.workbook-loading span { width: 30px; height: 30px; border: 3px solid #dce8f5; border-top-color: var(--blue); border-radius: 50%; animation: workbook-spin .8s linear infinite; }
+.workbook-loading b { font-size: 12px; }
+@keyframes workbook-spin { to { transform: rotate(360deg); } }
+
 .schedule-card { display: grid; grid-template-columns: 1fr 28px 1fr; align-items: center; gap: 10px; margin-top: 16px; padding: 18px 20px; border-radius: 18px; background: linear-gradient(135deg,#eaf2ff,#edf9f5); border: 1px solid #dbe8f2; }
 .schedule-card div:not(.schedule-line) { display: flex; align-items: center; gap: 10px; }
 .schedule-card span { color: var(--navy); font-size: 18px; font-weight: 800; }
@@ -279,10 +314,27 @@ noscript { display: block; padding: 20px; text-align: center; color: var(--red);
   .settlement-hero > div + div { padding-top: 8px; border-top: 1px solid #d7ecdf; }
   .detail-market-grid { grid-template-columns: 1fr; }
   .detail-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .workbook-meta { align-items: flex-start; flex-direction: column; gap: 4px; }
+  .workbook-sheet-tabs { display: flex; overflow-x: auto; padding-bottom: 6px; scroll-snap-type: x proximity; }
+  .workbook-sheet-tabs button { flex: 0 0 118px; scroll-snap-align: start; }
+  .workbook-toolbar { grid-template-columns: 1fr 1fr; }
+  .workbook-toolbar .search-box { grid-column: 1 / -1; }
+  .workbook-table-wrap { display: none; }
+  .workbook-mobile-list { display: grid; gap: 8px; }
+  .workbook-row-card { overflow: hidden; border: 1px solid #e2e9f0; border-radius: 13px; background: white; }
+  .workbook-row-card > summary { display: grid; grid-template-columns: auto 1fr; gap: 3px 9px; padding: 11px 12px; list-style: none; cursor: pointer; }
+  .workbook-row-card > summary::-webkit-details-marker { display: none; }
+  .workbook-row-card > summary span { grid-row: 1 / 3; align-self: center; padding: 4px 6px; border-radius: 7px; background: #eef3f8; color: #728397; font-size: 9px; font-weight: 800; }
+  .workbook-row-card > summary b { min-width: 0; color: var(--navy); font-size: 11px; overflow-wrap: anywhere; }
+  .workbook-row-card > summary small { min-width: 0; color: #7f8fa0; font-size: 9px; line-height: 1.4; overflow-wrap: anywhere; }
+  .workbook-card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; padding: 1px; border-top: 1px solid #e8edf3; background: #e8edf3; }
+  .workbook-card-grid > div { min-width: 0; padding: 9px 10px; background: white; }
+  .workbook-card-grid span { display: block; margin-bottom: 4px; color: #8997a6; font-size: 8px; font-weight: 750; }
+  .workbook-card-grid p { margin: 0; color: #3f556a; font-size: 10px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
   .combined-note { align-items: flex-start; flex-wrap: wrap; }
   .combined-note p { flex-basis: 100%; }
   .view-tabs { display: none; }
-  .mobile-nav { position: fixed; z-index: 20; inset: auto 10px calc(10px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: repeat(4,1fr); gap: 4px; padding: 7px; border: 1px solid rgba(217,226,236,.9); border-radius: 18px; background: rgba(255,255,255,.94); box-shadow: 0 12px 35px rgba(16,42,67,.18); backdrop-filter: blur(18px); }
+  .mobile-nav { position: fixed; z-index: 20; inset: auto 10px calc(10px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: repeat(5,1fr); gap: 4px; padding: 7px; border: 1px solid rgba(217,226,236,.9); border-radius: 18px; background: rgba(255,255,255,.94); box-shadow: 0 12px 35px rgba(16,42,67,.18); backdrop-filter: blur(18px); }
   .mobile-nav button { display: grid; justify-items: center; gap: 5px; border: 0; border-radius: 12px; background: transparent; color: var(--muted); padding: 7px 4px 6px; font-size: 10px; font-weight: 750; }
   .mobile-nav button i { width: 18px; height: 4px; border-radius: 999px; background: #d6dee7; }
   .mobile-nav button.active { color: var(--navy); background: #edf4ff; }
