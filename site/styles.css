@@ -79,6 +79,7 @@ h2 { margin: 0; color: var(--navy); font-size: 20px; letter-spacing: -.02em; }
 .unit-chip { border-radius: 999px; background: #eaf2ff; color: #2468be; padding: 6px 10px; font-size: 11px; font-weight: 700; white-space: nowrap; }
 .unit-chip.total { background: #fff1e4; color: #b25d13; }
 .unit-chip.handicap { background: #eaf2ff; color: #2468be; }
+.unit-chip.settled { background: #eaf8f1; color: #177a4d; }
 
 .chart-wrap { margin-top: 14px; overflow: hidden; }
 .chart-wrap svg { display: block; width: 100%; height: 210px; overflow: visible; }
@@ -129,6 +130,7 @@ h2 { margin: 0; color: var(--navy); font-size: 20px; letter-spacing: -.02em; }
 .list-note { margin: 16px 0 0; padding: 12px 14px; border-radius: 12px; background: #f3f7fb; color: var(--muted); font-size: 12px; line-height: 1.6; }
 
 .filters { display: grid; grid-template-columns: 1fr 170px; gap: 10px; margin-top: 18px; }
+.filters.single { grid-template-columns: 1fr; }
 .search-box, .status-select { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 12px; background: #f8fafc; padding: 0 12px; }
 .search-box:focus-within, .status-select:focus-within { border-color: #9bc2f5; box-shadow: 0 0 0 3px rgba(47,128,237,.08); }
 .search-box span, .status-select span { color: var(--muted); font-size: 11px; font-weight: 700; }
@@ -272,10 +274,10 @@ h2 { margin: 0; color: var(--navy); font-size: 20px; letter-spacing: -.02em; }
 .workbook-profit.is-gain { color: #137a4a; }
 .workbook-profit.is-loss { color: #c13f3f; }
 .workbook-mobile-list { display: none; }
-.workbook-pagination { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 13px; }
-.workbook-pagination button { border: 1px solid #d9e3ec; border-radius: 10px; background: white; color: var(--navy); padding: 8px 13px; font-size: 11px; font-weight: 750; cursor: pointer; }
-.workbook-pagination button:disabled { cursor: default; opacity: .42; }
-.workbook-pagination span { color: #728397; font-size: 10px; font-weight: 700; }
+.workbook-pagination, .match-pagination { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 13px; }
+.workbook-pagination button, .match-pagination button { border: 1px solid #d9e3ec; border-radius: 10px; background: white; color: var(--navy); padding: 8px 13px; font-size: 11px; font-weight: 750; cursor: pointer; }
+.workbook-pagination button:disabled, .match-pagination button:disabled { cursor: default; opacity: .42; }
+.workbook-pagination span, .match-pagination span { color: #728397; font-size: 10px; font-weight: 700; }
 .workbook-loading { min-height: 300px; display: grid; place-content: center; justify-items: center; gap: 12px; color: #6f8296; }
 .workbook-loading span { width: 30px; height: 30px; border: 3px solid #dce8f5; border-top-color: var(--blue); border-radius: 50%; animation: workbook-spin .8s linear infinite; }
 .workbook-loading b { font-size: 12px; }
@@ -341,7 +343,7 @@ noscript { display: block; padding: 20px; text-align: center; color: var(--red);
   .combined-note { align-items: flex-start; flex-wrap: wrap; }
   .combined-note p { flex-basis: 100%; }
   .view-tabs { display: none; }
-  .mobile-nav { position: fixed; z-index: 20; inset: auto 10px calc(10px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: repeat(5,1fr); gap: 4px; padding: 7px; border: 1px solid rgba(217,226,236,.9); border-radius: 18px; background: rgba(255,255,255,.94); box-shadow: 0 12px 35px rgba(16,42,67,.18); backdrop-filter: blur(18px); }
+  .mobile-nav { position: fixed; z-index: 20; inset: auto 10px calc(10px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: repeat(6,1fr); gap: 3px; padding: 7px; border: 1px solid rgba(217,226,236,.9); border-radius: 18px; background: rgba(255,255,255,.94); box-shadow: 0 12px 35px rgba(16,42,67,.18); backdrop-filter: blur(18px); }
   .mobile-nav button { display: grid; justify-items: center; gap: 5px; border: 0; border-radius: 12px; background: transparent; color: var(--muted); padding: 7px 4px 6px; font-size: 10px; font-weight: 750; }
   .mobile-nav button i { width: 18px; height: 4px; border-radius: 999px; background: #d6dee7; }
   .mobile-nav button.active { color: var(--navy); background: #edf4ff; }

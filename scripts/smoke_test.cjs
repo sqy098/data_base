@@ -41,6 +41,7 @@ function render(hash, mutateData) {
     "ranking-results": fakeElement("ranking-results"),
     "match-results": fakeElement("match-results"),
     "match-count": fakeElement("match-count"),
+    "match-pagination": fakeElement("match-pagination"),
   };
   const controls = {
     rankingQuery: fakeElement("ranking-query"),
@@ -96,12 +97,23 @@ const team = render("#team");
 assert(team.elements.view.innerHTML.includes("球队维度"), "Team view missing");
 assert(team.elements["ranking-results"].innerHTML.includes("ranking-row"), "Team rankings missing");
 
-const matches = render("#matches");
-assert((matches.elements["match-results"].innerHTML.match(/match-card/g) || []).length === 50, "Expected 50 match cards");
-assert(matches.elements.view.innerHTML.includes("未结算：优先看赛前推荐"), "Match-stage legend is missing");
+const pending = render("#pending");
+const expectedPending = pending.data.totals.matches - pending.data.totals.settled;
+assert(pending.data.pendingMatches.length === expectedPending, "Pending match export is incomplete");
+assert(pending.data.settledMatches.length === pending.data.totals.settled, "Settled match export is incomplete");
+assert(
+  pending.data.pendingMatches.length + pending.data.settledMatches.length === pending.data.totals.matches,
+  "Split match exports do not cover the full ledger"
+);
+assert(
+  (pending.elements["match-results"].innerHTML.match(/match-card/g) || []).length === Math.min(50, expectedPending),
+  "Expected first page of pending match cards"
+);
+assert(pending.elements.view.innerHTML.includes("待结算比赛"), "Pending match page is missing");
+assert(pending.elements.view.innerHTML.includes("优先查看两项赛前推荐与执行条件"), "Pending-page guidance is missing");
 
-const pendingFixture = render("#matches", (data) => {
-  Object.assign(data.matches[0], {
+const pendingFixture = render("#pending", (data) => {
+  Object.assign(data.pendingMatches[0], {
     status: "需复核",
     handicapResult: "",
     totalResult: "",
@@ -115,8 +127,8 @@ assert(pendingFixture.elements["match-results"].innerHTML.includes("让球</span
 assert(pendingFixture.elements["match-results"].innerHTML.includes("大小球</span><b>待复核"), "Pending total badge is missing");
 assert(pendingFixture.elements["match-results"].innerHTML.includes("赛前结论"), "Unsettled recommendation summary is missing");
 
-const settledFixture = render("#matches", (data) => {
-  Object.assign(data.matches[0], {
+const settledFixture = render("#settled", (data) => {
+  Object.assign(data.settledMatches[0], {
     status: "已结算",
     handicapResult: "赢",
     totalResult: "赢半",
@@ -131,16 +143,19 @@ assert(settledFixture.elements["match-results"].innerHTML.includes("大小球</s
 assert(settledFixture.elements["match-results"].innerHTML.includes("让球结算"), "Settled handicap summary is missing");
 assert(settledFixture.elements["match-results"].innerHTML.includes("大小球结算"), "Settled total summary is missing");
 assert(settledFixture.elements["match-results"].innerHTML.includes("终场比分"), "Settled score highlight is missing");
+assert(settledFixture.elements.view.innerHTML.includes("已结算比赛"), "Settled match page is missing");
 
-const latest = matches.data.matches.slice(0, 50);
-const searchTerm = String(latest[0].home || latest[0].away || latest[0].league);
-const expectedFiltered = latest.filter((match) =>
+const pendingRows = pending.data.pendingMatches;
+const searchTerm = String(pendingRows[0].home || pendingRows[0].away || pendingRows[0].league);
+const expectedFiltered = pendingRows.filter((match) =>
   [match.home, match.away, match.league].some((value) => String(value || "").toLowerCase().includes(searchTerm.toLowerCase()))
 ).length;
-matches.controls.matchQuery.value = searchTerm;
-matches.controls.matchQuery.listeners.input();
-assert(matches.elements["match-count"].textContent.startsWith(`显示 ${expectedFiltered} / 50`), "Match search count is wrong");
+pending.controls.matchQuery.value = searchTerm;
+pending.controls.matchQuery.listeners.input();
+assert(pending.elements["match-count"].textContent.endsWith(`/ ${expectedFiltered} 场`), "Pending match search count is wrong");
 
+assert(indexSource.includes('data-tab="pending"'), "Pending-match navigation is missing");
+assert(indexSource.includes('data-tab="settled"'), "Settled-match navigation is missing");
 assert(indexSource.includes('data-tab="workbook"'), "Full-workbook navigation is missing");
 assert(appSource.includes("async function renderWorkbook()"), "Full-workbook renderer is missing");
 assert(appSource.includes("workbookDecoratedValue(header, row.cells[index])"), "Ledger result decoration is missing");
@@ -161,10 +176,11 @@ assert(workbookSheets.dimensions.rowCount === 1305 && workbookSheets.dimensions.
 
 console.log(JSON.stringify({
   ok: true,
-  totals: matches.data.totals,
-  latestMatches: matches.data.matches.length,
+  totals: pending.data.totals,
+  pendingMatches: pending.data.pendingMatches.length,
+  settledMatches: pending.data.settledMatches.length,
   fullWorkbookMatches: manifest.validation.records,
   workbookSheets: manifest.sheets.map((sheet) => sheet.name),
   zhejiangMatch: true,
-  views: ["overview", "league", "team", "matches", "workbook"],
+  views: ["overview", "league", "team", "pending", "settled", "workbook"],
 }));

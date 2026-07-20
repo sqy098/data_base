@@ -11,6 +11,7 @@ from numbers import Number
 from pathlib import Path
 
 from openpyxl import load_workbook
+from openpyxl.utils.datetime import from_excel
 
 
 HEADERS = [
@@ -53,6 +54,18 @@ def fmt_datetime(value):
     if isinstance(value, datetime):
         return value.strftime("%Y-%m-%d %H:%M")
     return str(value).strip() if value else ""
+
+
+def normalized_excel_datetime(value, epoch):
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, Number) and not isinstance(value, bool):
+        try:
+            converted = from_excel(value, epoch)
+        except (OverflowError, ValueError):
+            return value
+        return converted if isinstance(converted, datetime) else value
+    return value
 
 
 def add_months(year, month, delta):
@@ -106,6 +119,37 @@ def ranking(rows, value_key, dimension):
     )
 
 
+def match_payload(row):
+    handicap_profit = numeric(row["handicapProfit"])
+    total_profit = numeric(row["totalProfit"])
+    combined = None
+    if handicap_profit is not None or total_profit is not None:
+        combined = round((handicap_profit or 0) + (total_profit or 0), 4)
+    source_key = str(row["sourceKey"]) if row["sourceKey"] else "|".join(
+        [fmt_datetime(row["kickoff"])[:10], str(row["home"]), str(row["away"])]
+    )
+    return {
+        "sourceKey": source_key,
+        "date": fmt_datetime(row["kickoff"]),
+        "frozenAt": fmt_datetime(row["frozenAt"]),
+        "league": str(row["league"]),
+        "home": str(row["home"]),
+        "away": str(row["away"]),
+        "handicapPick": str(row["handicapPick"]),
+        "totalPick": str(row["totalPick"]),
+        "optional": str(row["optional"]),
+        "score": str(row["score"]),
+        "status": str(row["status"]),
+        "handicapResult": str(row["handicapResult"]),
+        "totalResult": str(row["totalResult"]),
+        "handicapProfit": handicap_profit,
+        "totalProfit": total_profit,
+        "profit": combined,
+        "source": str(row["source"]),
+        "note": str(row["note"]),
+    }
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("workbook", type=Path)
@@ -119,6 +163,8 @@ def main():
         if not any(value is not None for value in values):
             continue
         row = {key: clean(value) for key, value in zip(HEADERS, values)}
+        row["kickoff"] = normalized_excel_datetime(row["kickoff"], workbook.epoch)
+        row["frozenAt"] = normalized_excel_datetime(row["frozenAt"], workbook.epoch)
         if not row["kickoff"] or not row["home"] or not row["away"]:
             continue
         rows.append(row)
@@ -165,38 +211,8 @@ def main():
         default=None,
     )
 
-    matches = []
-    for row in rows[:50]:
-        handicap_profit = numeric(row["handicapProfit"])
-        total_profit = numeric(row["totalProfit"])
-        combined = None
-        if handicap_profit is not None or total_profit is not None:
-            combined = round((handicap_profit or 0) + (total_profit or 0), 4)
-        source_key = str(row["sourceKey"]) if row["sourceKey"] else "|".join(
-            [fmt_datetime(row["kickoff"])[:10], str(row["home"]), str(row["away"])]
-        )
-        matches.append(
-            {
-                "sourceKey": source_key,
-                "date": fmt_datetime(row["kickoff"]),
-                "frozenAt": fmt_datetime(row["frozenAt"]),
-                "league": str(row["league"]),
-                "home": str(row["home"]),
-                "away": str(row["away"]),
-                "handicapPick": str(row["handicapPick"]),
-                "totalPick": str(row["totalPick"]),
-                "optional": str(row["optional"]),
-                "score": str(row["score"]),
-                "status": str(row["status"]),
-                "handicapResult": str(row["handicapResult"]),
-                "totalResult": str(row["totalResult"]),
-                "handicapProfit": handicap_profit,
-                "totalProfit": total_profit,
-                "profit": combined,
-                "source": str(row["source"]),
-                "note": str(row["note"]),
-            }
-        )
+    pending_matches = [match_payload(row) for row in rows if str(row["status"]) != "已结算"]
+    settled_matches = [match_payload(row) for row in rows if str(row["status"]) == "已结算"]
 
     update_text = latest_frozen.strftime("%Y-%m-%d %H:%M") if latest_frozen else "待更新"
     data = {
@@ -213,7 +229,8 @@ def main():
         "leagueTotals": ranking(rows, "totalProfit", "league"),
         "teamHandicap": ranking(rows, "handicapProfit", "team"),
         "teamTotals": ranking(rows, "totalProfit", "team"),
-        "matches": matches,
+        "pendingMatches": pending_matches,
+        "settledMatches": settled_matches,
     }
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -229,7 +246,8 @@ def main():
                 "settled": settled,
                 "handicap": handicap,
                 "overUnder": over_under,
-                "latest50": len(matches),
+                "pendingMatches": len(pending_matches),
+                "settledMatches": len(settled_matches),
                 "output": str(args.output),
             },
             ensure_ascii=False,

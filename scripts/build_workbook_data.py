@@ -12,6 +12,7 @@ from pathlib import Path
 
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
+from openpyxl.utils.datetime import from_excel
 
 
 SHEET_CONFIG = {
@@ -53,7 +54,22 @@ def trim_trailing_empty(values):
     return values
 
 
-def validate_ledger(values_sheet, formula_sheet):
+def normalized_excel_datetime(value, epoch):
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        try:
+            converted = from_excel(value, epoch)
+        except (OverflowError, ValueError):
+            return None
+        if isinstance(converted, datetime):
+            return converted
+        if isinstance(converted, date):
+            return datetime.combine(converted, time.min)
+    return None
+
+
+def validate_ledger(values_sheet, formula_sheet, epoch):
     records = []
     blank_seen = False
     gap_rows = []
@@ -68,8 +84,8 @@ def validate_ledger(values_sheet, formula_sheet):
         if blank_seen:
             gap_rows.append(row_number)
 
-        kickoff = values[1]
-        if not isinstance(kickoff, datetime):
+        kickoff = normalized_excel_datetime(values[1], epoch)
+        if kickoff is None:
             raise ValueError(f"比赛台账 B{row_number} 不是有效开球时间")
 
         source_formula = formula_sheet.cell(row_number, 1).value
@@ -100,7 +116,7 @@ def validate_ledger(values_sheet, formula_sheet):
     }
 
 
-def export_sheet(values_sheet, formula_sheet, config, output_path):
+def export_sheet(values_sheet, formula_sheet, config, output_path, epoch):
     rows = []
     last_nonempty_row = 0
     for row_number in range(1, values_sheet.max_row + 1):
@@ -113,6 +129,8 @@ def export_sheet(values_sheet, formula_sheet, config, output_path):
             formula = formula_sheet.cell(row_number, column).value
             if value is None and isinstance(formula, str) and formula.startswith("="):
                 value = formula
+            if values_sheet.title == "比赛台账" and row_number >= 5 and column in (2, 9):
+                value = normalized_excel_datetime(value, epoch) or value
             cells.append(json_value(value))
         cells = trim_trailing_empty(cells)
         if cells:
@@ -162,14 +180,22 @@ def main():
 
     values_workbook = load_workbook(args.workbook, read_only=False, data_only=True)
     formula_workbook = load_workbook(args.workbook, read_only=False, data_only=False)
-    validation = validate_ledger(values_workbook["比赛台账"], formula_workbook["比赛台账"])
+    validation = validate_ledger(
+        values_workbook["比赛台账"], formula_workbook["比赛台账"], values_workbook.epoch
+    )
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     sheets = []
     for sheet_name, config in SHEET_CONFIG.items():
         output_path = args.output_dir / f"{config['slug']}.json"
         sheets.append(
-            export_sheet(values_workbook[sheet_name], formula_workbook[sheet_name], config, output_path)
+            export_sheet(
+                values_workbook[sheet_name],
+                formula_workbook[sheet_name],
+                config,
+                output_path,
+                values_workbook.epoch,
+            )
         )
     values_workbook.close()
     formula_workbook.close()

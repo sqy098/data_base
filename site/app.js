@@ -3,12 +3,15 @@
 
   const data = window.DASHBOARD_DATA;
   const view = document.getElementById("view");
-  const validTabs = new Set(["overview", "league", "team", "matches", "workbook"]);
-  const initialTab = window.location.hash.replace("#", "");
+  const validTabs = new Set(["overview", "league", "team", "pending", "settled", "workbook"]);
+  const requestedTab = window.location.hash.replace("#", "");
+  const initialTab = requestedTab === "matches" ? "pending" : requestedTab;
   const state = {
     activeTab: validTabs.has(initialTab) ? initialTab : "overview",
     leagueMarket: "handicap",
     teamMarket: "handicap",
+    matchPage: { pending: 1, settled: 1 },
+    matchPageSize: 50,
     workbookManifest: null,
     workbookSheets: {},
     workbookSheet: "matches",
@@ -301,40 +304,74 @@
     );
   }
 
-  function renderMatches() {
-    const latest = data.matches.slice(0, 50);
-    const settledCount = latest.filter(isSettledMatch).length;
-    const unsettledCount = latest.length - settledCount;
-    const statuses = ["全部", "已冻结", "待赛果", "进行中", "已结算", "需复核", "延期", "取消"];
+  function renderMatches(kind) {
+    const settledView = kind === "settled";
+    const fallback = Array.isArray(data.matches) ? data.matches : [];
+    const source = settledView
+      ? (data.settledMatches || fallback.filter(isSettledMatch))
+      : (data.pendingMatches || fallback.filter((match) => !isSettledMatch(match)));
+    const statuses = ["全部", ...new Set(source.map((match) => String(match.status || "").trim()).filter(Boolean))];
+    const title = settledView ? "已结算比赛" : "待结算比赛";
+    const kicker = settledView ? "赛果复盘区" : "赛前执行区";
+    const description = settledView
+      ? '<span class="legend-settlement"><i></i>终场比分、让球结果与大小球结果分别展示</span>'
+      : '<span class="legend-recommendation"><i></i>优先查看两项赛前推荐与执行条件；空结果显示待复核</span>';
     view.innerHTML =
       '<section class="panel detail-panel">' +
-        panelHeading("比赛详情", "最新 50 场比赛", '<span class="unit-chip">待结算 ' + unsettledCount + " · 已结算 " + settledCount + "</span>") +
-        '<div class="filters"><label class="search-box"><span>搜索</span><input data-match-query placeholder="球队或赛事" aria-label="搜索球队或赛事"></label>' +
-        '<label class="status-select"><span>状态</span><select data-match-status aria-label="筛选比赛状态">' + statuses.map((item) => '<option value="' + item + '">' + item + "</option>").join("") + "</select></label></div>" +
-        '<div class="match-stage-legend"><span class="legend-recommendation"><i></i>未结算：优先看赛前推荐</span><span class="legend-settlement"><i></i>已结算：优先看赛果与盈亏</span></div>' +
-        '<div class="match-list-header"><span>按北京时间开球时间倒序</span><b id="match-count"></b></div>' +
-        '<div id="match-results"></div>' +
+        panelHeading(kicker, title, '<span class="unit-chip ' + (settledView ? "settled" : "") + '">共 ' + formatCount(source.length) + " 场</span>") +
+        '<div class="filters' + (settledView ? " single" : "") + '"><label class="search-box"><span>搜索</span><input data-match-query placeholder="球队或赛事" aria-label="搜索球队或赛事"></label>' +
+        (settledView ? "" : '<label class="status-select"><span>状态</span><select data-match-status aria-label="筛选比赛状态">' + statuses.map((item) => '<option value="' + escapeHtml(item) + '">' + escapeHtml(item) + "</option>").join("") + "</select></label>") + "</div>" +
+        '<div class="match-stage-legend">' + description + "</div>" +
+        '<div class="match-list-header"><span>北京时间开球时间倒序 · 每页 ' + state.matchPageSize + ' 场</span><b id="match-count"></b></div>' +
+        '<div id="match-results"></div><div class="match-pagination" id="match-pagination"></div>' +
       "</section>";
 
     const query = view.querySelector("[data-match-query]");
     const status = view.querySelector("[data-match-status]");
     const results = document.getElementById("match-results");
     const count = document.getElementById("match-count");
+    const pagination = document.getElementById("match-pagination");
     const refresh = () => {
       const term = query.value.trim().toLowerCase();
-      const selected = status.value;
-      const filtered = latest.filter((match) => {
+      const selected = status ? status.value : "全部";
+      const filtered = source.filter((match) => {
         const haystack = (match.home + " " + match.away + " " + match.league).toLowerCase();
         return haystack.includes(term) && (selected === "全部" || match.status === selected);
       });
-      count.textContent = "显示 " + filtered.length + " / " + latest.length + " 场";
-      results.innerHTML = filtered.length
-        ? '<div class="match-list">' + filtered.map((match, index) => matchCard(match, index === 0)).join("") + "</div>"
+      const pages = Math.max(1, Math.ceil(filtered.length / state.matchPageSize));
+      state.matchPage[kind] = Math.min(Math.max(1, state.matchPage[kind]), pages);
+      const start = (state.matchPage[kind] - 1) * state.matchPageSize;
+      const visible = filtered.slice(start, start + state.matchPageSize);
+      const end = Math.min(start + visible.length, filtered.length);
+      count.textContent = filtered.length
+        ? "显示 " + (start + 1) + "–" + end + " / " + filtered.length + " 场"
+        : "显示 0 / 0 场";
+      results.innerHTML = visible.length
+        ? '<div class="match-list">' + visible.map((match, index) => matchCard(match, index === 0)).join("") + "</div>"
         : '<div class="empty-state compact"><div class="empty-mark">0</div><h3>暂无匹配比赛</h3><p>可调整球队、赛事或状态筛选。</p></div>';
+      pagination.innerHTML =
+        '<button type="button" data-match-page="prev"' + (state.matchPage[kind] <= 1 ? " disabled" : "") + '>上一页</button>' +
+        '<span>第 ' + state.matchPage[kind] + " / " + pages + " 页</span>" +
+        '<button type="button" data-match-page="next"' + (state.matchPage[kind] >= pages ? " disabled" : "") + '>下一页</button>';
+      pagination.querySelectorAll("[data-match-page]").forEach((button) => {
+        button.addEventListener("click", () => {
+          state.matchPage[kind] += button.dataset.matchPage === "next" ? 1 : -1;
+          refresh();
+          window.scrollTo({ top: document.getElementById("match-results").offsetTop - 90, behavior: "smooth" });
+        });
+      });
     };
     refresh();
-    query.addEventListener("input", refresh);
-    status.addEventListener("change", refresh);
+    query.addEventListener("input", () => {
+      state.matchPage[kind] = 1;
+      refresh();
+    });
+    if (status) {
+      status.addEventListener("change", () => {
+        state.matchPage[kind] = 1;
+        refresh();
+      });
+    }
   }
 
   function formatBytes(value) {
@@ -555,7 +592,8 @@
     if (state.activeTab === "overview") renderOverview();
     if (state.activeTab === "league") renderRanking("league");
     if (state.activeTab === "team") renderRanking("team");
-    if (state.activeTab === "matches") renderMatches();
+    if (state.activeTab === "pending") renderMatches("pending");
+    if (state.activeTab === "settled") renderMatches("settled");
     if (state.activeTab === "workbook") renderWorkbook();
   }
 
